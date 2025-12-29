@@ -1,6 +1,6 @@
 {
   "name": "flowsfarm",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Local-first workflow synchronization for n8n",
   "type": "module",
   "bin": {
@@ -8,13 +8,15 @@
   },
   "main": "./dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun --minify",
     "dev": "bun run --watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build && cp ../../README.md .",
+    "postpublish": "rm -f README.md"
   },
   "keywords": [
     "n8n",

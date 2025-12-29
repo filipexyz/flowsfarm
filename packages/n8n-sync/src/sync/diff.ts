@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, relative } from 'path';
 import { eq } from 'drizzle-orm';
 import {
   getDb,
@@ -15,6 +15,7 @@ export interface WorkflowDiff {
   workflowId: string;
   workflowName: string;
   remoteId: string;
+  filePath: string;
   hasChanges: boolean;
   localHash: string;
   remoteHash: string | null;
@@ -115,38 +116,90 @@ export async function diffWorkflow(
       });
     }
 
-    // Compare nodes (simplified - just count)
-    if (localWorkflow.nodes.length !== remoteWorkflow.nodes.length) {
+    // Compare nodes in detail
+    const localNodesMap = new Map(localWorkflow.nodes.map((n) => [n.id || n.name, n]));
+    const remoteNodesMap = new Map(remoteWorkflow.nodes.map((n) => [n.id || n.name, n]));
+
+    // Find added/modified nodes (in local but different from remote)
+    for (const [nodeId, localNode] of localNodesMap) {
+      const remoteNode = remoteNodesMap.get(nodeId);
+      if (!remoteNode) {
+        changes.push({
+          path: `node "${localNode.name}"`,
+          type: 'added',
+          localValue: localNode.type,
+        });
+      } else {
+        // Compare node content
+        const localJson = JSON.stringify(localNode);
+        const remoteJson = JSON.stringify(remoteNode);
+        if (localJson !== remoteJson) {
+          // Find specific differences
+          if (localNode.name !== remoteNode.name) {
+            changes.push({
+              path: `node "${remoteNode.name}".name`,
+              type: 'modified',
+              localValue: localNode.name,
+              remoteValue: remoteNode.name,
+            });
+          }
+          // Compare parameters in detail
+          const localParams = localNode.parameters || {};
+          const remoteParams = remoteNode.parameters || {};
+          const allParamKeys = new Set([...Object.keys(localParams), ...Object.keys(remoteParams)]);
+
+          for (const key of allParamKeys) {
+            const localVal = JSON.stringify(localParams[key]);
+            const remoteVal = JSON.stringify(remoteParams[key]);
+            if (localVal !== remoteVal) {
+              if (localParams[key] === undefined) {
+                changes.push({
+                  path: `node "${localNode.name}".${key}`,
+                  type: 'removed',
+                  remoteValue: remoteParams[key],
+                });
+              } else if (remoteParams[key] === undefined) {
+                changes.push({
+                  path: `node "${localNode.name}".${key}`,
+                  type: 'added',
+                  localValue: localParams[key],
+                });
+              } else {
+                changes.push({
+                  path: `node "${localNode.name}".${key}`,
+                  type: 'modified',
+                  localValue: localParams[key],
+                  remoteValue: remoteParams[key],
+                });
+              }
+            }
+          }
+          // Ignore position changes - just visual, doesn't affect logic
+        }
+      }
+    }
+
+    // Find removed nodes (in remote but not local)
+    for (const [nodeId, remoteNode] of remoteNodesMap) {
+      if (!localNodesMap.has(nodeId)) {
+        changes.push({
+          path: `node "${remoteNode.name}"`,
+          type: 'removed',
+          remoteValue: remoteNode.type,
+        });
+      }
+    }
+
+    // Compare connections
+    const localConns = JSON.stringify(localWorkflow.connections);
+    const remoteConns = JSON.stringify(remoteWorkflow.connections);
+    if (localConns !== remoteConns) {
       changes.push({
-        path: 'nodes',
+        path: 'connections',
         type: 'modified',
-        localValue: `${localWorkflow.nodes.length} nodes`,
-        remoteValue: `${remoteWorkflow.nodes.length} nodes`,
+        localValue: localWorkflow.connections,
+        remoteValue: remoteWorkflow.connections,
       });
-    } else {
-      // Check for node-level changes
-      const localNodeIds = new Set(localWorkflow.nodes.map((n) => n.id || n.name));
-      const remoteNodeIds = new Set(remoteWorkflow.nodes.map((n) => n.id || n.name));
-
-      for (const nodeId of localNodeIds) {
-        if (!remoteNodeIds.has(nodeId)) {
-          changes.push({
-            path: `nodes.${nodeId}`,
-            type: 'added',
-            localValue: nodeId,
-          });
-        }
-      }
-
-      for (const nodeId of remoteNodeIds) {
-        if (!localNodeIds.has(nodeId)) {
-          changes.push({
-            path: `nodes.${nodeId}`,
-            type: 'removed',
-            remoteValue: nodeId,
-          });
-        }
-      }
     }
 
     // Compare settings
@@ -166,6 +219,7 @@ export async function diffWorkflow(
     workflowId: localRecord.id,
     workflowName: localRecord.name,
     remoteId: localRecord.remoteId,
+    filePath: relative(process.cwd(), workflowPath),
     hasChanges: localHash !== remoteHash,
     localHash,
     remoteHash,

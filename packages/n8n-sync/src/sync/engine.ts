@@ -1,6 +1,10 @@
 import { eq } from 'drizzle-orm';
+import { existsSync, readFileSync } from 'fs';
+import { join, relative } from 'path';
 import {
   getDb,
+  getConfig,
+  hashWorkflow,
   schema,
   decrypt,
   logger,
@@ -98,9 +102,11 @@ export class SyncEngine {
 
   /**
    * Get current sync status.
+   * Checks actual file content, not just database status.
    */
   getStatus() {
     const db = getDb();
+    const config = getConfig();
 
     const workflows = db
       .select()
@@ -108,43 +114,63 @@ export class SyncEngine {
       .where(eq(schema.workflows.connectionId, this.connectionId))
       .all();
 
-    const statusCounts = {
+    type WorkflowInfo = { name: string; path: string };
+    const result = {
+      connectionId: this.connectionId,
       total: workflows.length,
-      synced: 0,
-      localModified: 0,
-      remoteModified: 0,
-      conflict: 0,
-      newLocal: 0,
-      deletedRemote: 0,
+      synced: [] as WorkflowInfo[],
+      localModified: [] as WorkflowInfo[],
+      remoteModified: [] as WorkflowInfo[],
+      conflict: [] as WorkflowInfo[],
+      newLocal: [] as WorkflowInfo[],
+      deletedRemote: [] as WorkflowInfo[],
     };
 
     for (const workflow of workflows) {
-      switch (workflow.syncStatus) {
-        case 'synced':
-          statusCounts.synced++;
-          break;
-        case 'local_modified':
-          statusCounts.localModified++;
-          break;
-        case 'remote_modified':
-          statusCounts.remoteModified++;
-          break;
-        case 'conflict':
-          statusCounts.conflict++;
-          break;
-        case 'new_local':
-          statusCounts.newLocal++;
-          break;
-        case 'deleted_remote':
-          statusCounts.deletedRemote++;
-          break;
+      const workflowPath = join(
+        config.workflowsPath,
+        this.connectionId,
+        workflow.remoteId,
+        'workflow.json'
+      );
+      const relativePath = relative(process.cwd(), workflowPath);
+      const info: WorkflowInfo = { name: workflow.name, path: relativePath };
+
+      // Check actual file content for local modifications
+      let hasLocalChanges = false;
+      if (workflow.syncStatus === 'synced' && existsSync(workflowPath)) {
+        const content = readFileSync(workflowPath, 'utf-8');
+        const currentHash = hashWorkflow(JSON.parse(content));
+        hasLocalChanges = currentHash !== workflow.contentHash;
+      }
+
+      if (hasLocalChanges) {
+        result.localModified.push(info);
+      } else {
+        switch (workflow.syncStatus) {
+          case 'synced':
+            result.synced.push(info);
+            break;
+          case 'local_modified':
+            result.localModified.push(info);
+            break;
+          case 'remote_modified':
+            result.remoteModified.push(info);
+            break;
+          case 'conflict':
+            result.conflict.push(info);
+            break;
+          case 'new_local':
+            result.newLocal.push(info);
+            break;
+          case 'deleted_remote':
+            result.deletedRemote.push(info);
+            break;
+        }
       }
     }
 
-    return {
-      connectionId: this.connectionId,
-      ...statusCounts,
-    };
+    return result;
   }
 
   /**

@@ -35,7 +35,7 @@ export function diffCommand(): Command {
 
           console.log(chalk.bold(`\n${connection.name}`));
 
-          const spinner = ora('Comparing with remote...').start();
+          const spinner = ora('Fetching remote workflows...').start();
 
           try {
             let diffs: WorkflowDiff[];
@@ -59,62 +59,53 @@ export function diffCommand(): Command {
             const unchanged = diffs.filter((d) => !d.hasChanges);
 
             if (changed.length === 0) {
-              console.log(chalk.green('  ✓ All workflows in sync'));
-              console.log(chalk.dim(`    ${unchanged.length} workflows unchanged`));
+              console.log(chalk.green('\n  Everything up-to-date'));
+              console.log(chalk.dim(`  ${unchanged.length} workflows synced`));
               continue;
             }
 
-            console.log(
-              chalk.yellow(`\n  ${changed.length} workflows with differences:\n`)
-            );
-
+            // Show diffs like git
             for (const diff of changed) {
-              console.log(`  ${chalk.cyan(diff.workflowName)}`);
-              console.log(chalk.dim(`    Remote ID: ${diff.remoteId}`));
-              console.log(chalk.dim(`    Local:  ${diff.localHash.slice(0, 8)}...`));
-              console.log(
-                chalk.dim(
-                  `    Remote: ${diff.remoteHash?.slice(0, 8) || 'N/A'}...`
-                )
-              );
+              console.log(chalk.bold(`\ndiff ${diff.filePath}`));
 
               if (diff.changes.length > 0) {
-                console.log(chalk.dim('    Changes:'));
                 for (const change of diff.changes) {
-                  const icon =
-                    change.type === 'added'
-                      ? chalk.green('+')
-                      : change.type === 'removed'
-                        ? chalk.red('-')
-                        : chalk.yellow('~');
-
-                  console.log(`      ${icon} ${change.path}`);
-
-                  if (change.localValue !== undefined) {
-                    console.log(
-                      chalk.dim(
-                        `        local:  ${formatValue(change.localValue)}`
-                      )
-                    );
-                  }
-                  if (change.remoteValue !== undefined) {
-                    console.log(
-                      chalk.dim(
-                        `        remote: ${formatValue(change.remoteValue)}`
-                      )
-                    );
+                  console.log(chalk.cyan(`@@ ${change.path} @@`));
+                  if (change.type === 'modified') {
+                    const localLines = formatJson(change.localValue).split('\n');
+                    const remoteLines = formatJson(change.remoteValue).split('\n');
+                    for (const line of localLines) {
+                      console.log(chalk.red(`-${line}`));
+                    }
+                    for (const line of remoteLines) {
+                      console.log(chalk.green(`+${line}`));
+                    }
+                  } else if (change.type === 'added') {
+                    const lines = formatJson(change.localValue).split('\n');
+                    for (const line of lines) {
+                      console.log(chalk.green(`+${line}`));
+                    }
+                  } else if (change.type === 'removed') {
+                    const lines = formatJson(change.remoteValue).split('\n');
+                    for (const line of lines) {
+                      console.log(chalk.red(`-${line}`));
+                    }
                   }
                 }
+              } else {
+                console.log(chalk.dim('  (binary or content differs)'));
               }
-
-              console.log();
             }
 
+            // Summary
+            console.log();
+            console.log(chalk.yellow(`${changed.length} workflow(s) with differences`));
             if (unchanged.length > 0) {
-              console.log(
-                chalk.dim(`  ${unchanged.length} workflows unchanged`)
-              );
+              console.log(chalk.dim(`${unchanged.length} workflow(s) unchanged`));
             }
+            console.log();
+            console.log(chalk.dim('Use "flowsfarm pull" to get remote changes'));
+            console.log(chalk.dim('Use "flowsfarm push" to upload local changes'));
           } catch (error) {
             spinner.fail(chalk.red('Failed to compare'));
             if (error instanceof Error) {
@@ -133,13 +124,12 @@ export function diffCommand(): Command {
     });
 }
 
-function formatValue(value: unknown): string {
-  if (typeof value === 'string') {
-    return value.length > 50 ? value.slice(0, 47) + '...' : value;
-  }
+function formatJson(value: unknown): string {
+  if (value === undefined) return 'undefined';
+  if (value === null) return 'null';
+  if (typeof value === 'string') return value;
   if (typeof value === 'object') {
-    const str = JSON.stringify(value);
-    return str.length > 50 ? str.slice(0, 47) + '...' : str;
+    return JSON.stringify(value, null, 2);
   }
   return String(value);
 }

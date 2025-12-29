@@ -39,51 +39,57 @@ export function statusCommand(): Command {
             continue;
           }
 
-          // Status indicators
-          const synced = status.synced > 0;
           const hasChanges =
-            status.localModified > 0 ||
-            status.remoteModified > 0 ||
-            status.newLocal > 0;
-          const hasConflicts = status.conflict > 0;
+            status.localModified.length > 0 ||
+            status.conflict.length > 0 ||
+            status.newLocal.length > 0 ||
+            status.deletedRemote.length > 0;
 
-          if (synced && !hasChanges && !hasConflicts) {
-            console.log(chalk.green(`  ✓ ${status.total} workflows synced`));
+          if (!hasChanges) {
+            console.log(chalk.green(`\n  Nothing to push, working tree clean`));
+            console.log(chalk.dim(`  ${status.total} workflows synced`));
           } else {
-            console.log(chalk.dim(`  Total: ${status.total} workflows`));
-          }
+            // Show changes like git status
+            if (status.localModified.length > 0) {
+              console.log(chalk.yellow(`\n  Changes to be pushed:`));
+              for (const wf of status.localModified) {
+                console.log(chalk.yellow(`        modified:   ${wf.name}`));
+                console.log(chalk.dim(`                    ${wf.path}`));
+              }
+            }
 
-          if (status.synced > 0 && (hasChanges || hasConflicts)) {
-            console.log(chalk.green(`  ✓ ${status.synced} synced`));
-          }
+            if (status.newLocal.length > 0) {
+              console.log(chalk.green(`\n  New workflows:`));
+              for (const wf of status.newLocal) {
+                console.log(chalk.green(`        new:        ${wf.name}`));
+                console.log(chalk.dim(`                    ${wf.path}`));
+              }
+            }
 
-          if (status.localModified > 0) {
-            console.log(
-              chalk.yellow(`  ⚡ ${status.localModified} local modifications`)
-            );
-          }
+            if (status.deletedRemote.length > 0) {
+              console.log(chalk.red(`\n  Deleted remotely:`));
+              for (const wf of status.deletedRemote) {
+                console.log(chalk.red(`        deleted:    ${wf.name}`));
+                console.log(chalk.dim(`                    ${wf.path}`));
+              }
+            }
 
-          if (status.remoteModified > 0) {
-            console.log(
-              chalk.blue(`  ↓ ${status.remoteModified} remote modifications`)
-            );
-          }
+            if (status.conflict.length > 0) {
+              console.log(chalk.red(`\n  Conflicts (both modified):`));
+              for (const wf of status.conflict) {
+                console.log(chalk.red(`        conflict:   ${wf.name}`));
+                console.log(chalk.dim(`                    ${wf.path}`));
+              }
+            }
 
-          if (status.newLocal > 0) {
-            console.log(chalk.cyan(`  + ${status.newLocal} new local`));
-          }
-
-          if (status.deletedRemote > 0) {
-            console.log(
-              chalk.red(`  - ${status.deletedRemote} deleted remotely`)
-            );
-          }
-
-          if (status.conflict > 0) {
-            console.log(chalk.red(`  ⚠ ${status.conflict} conflicts`));
-            console.log(
-              chalk.dim('    Use flowsfarm diff to see details')
-            );
+            // Summary
+            console.log();
+            if (status.localModified.length > 0 || status.newLocal.length > 0) {
+              console.log(chalk.dim(`  Use "flowsfarm push" to upload changes`));
+            }
+            if (status.conflict.length > 0) {
+              console.log(chalk.dim(`  Use "flowsfarm diff" to see conflict details`));
+            }
           }
 
           // Last sync info
@@ -94,7 +100,7 @@ export function statusCommand(): Command {
           }
         }
 
-        console.log(); // Empty line at end
+        console.log();
       } catch (error) {
         if (error instanceof Error) {
           console.error(chalk.red(error.message));
