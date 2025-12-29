@@ -1,21 +1,39 @@
 {
-  "name": "@flowsfarm/cli",
+  "name": "flowsfarm",
   "version": "0.1.0",
+  "description": "Local-first workflow synchronization for n8n",
   "type": "module",
   "bin": {
-    "flowsfarm": "./src/index.ts"
+    "flowsfarm": "dist/index.js"
   },
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --minify",
     "dev": "bun run --watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build"
   },
-  "dependencies": {
-    "@flowsfarm/core": "workspace:*",
-    "@flowsfarm/n8n-sync": "workspace:*",
-    "chalk": "^5.6.2",
-    "commander": "^14.0.2",
-    "ora": "^9.0.0"
+  "keywords": [
+    "n8n",
+    "workflow",
+    "sync",
+    "automation",
+    "cli"
+  ],
+  "author": "Filipe Fernandes",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/filipexyz/flowsfarm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/filipexyz/flowsfarm/issues"
+  },
+  "homepage": "https://github.com/filipexyz/flowsfarm#readme",
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }
