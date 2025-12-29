@@ -146,7 +146,7 @@ export class N8nClient {
    * Create a new workflow.
    */
   async createWorkflow(workflow: CreateWorkflowInput): Promise<N8nWorkflow> {
-    const response = await this.request<unknown>('/rest/workflows', {
+    const response = await this.request<unknown>('/api/v1/workflows', {
       method: 'POST',
       body: JSON.stringify(workflow),
     });
@@ -160,8 +160,8 @@ export class N8nClient {
     id: string,
     workflow: UpdateWorkflowInput
   ): Promise<N8nWorkflow> {
-    const response = await this.request<unknown>(`/rest/workflows/${id}`, {
-      method: 'PATCH',
+    const response = await this.request<unknown>(`/api/v1/workflows/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(workflow),
     });
     return N8nWorkflowSchema.parse(response);
@@ -171,7 +171,7 @@ export class N8nClient {
    * Activate or deactivate a workflow.
    */
   async setWorkflowActive(id: string, active: boolean): Promise<N8nWorkflow> {
-    const response = await this.request<unknown>(`/rest/workflows/${id}`, {
+    const response = await this.request<unknown>(`/api/v1/workflows/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ active }),
     });
