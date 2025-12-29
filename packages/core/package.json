@@ -1,0 +1,29 @@
+{
+  "name": "@flowsfarm/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./storage": {
+      "import": "./src/storage/db.ts",
+      "types": "./src/storage/db.ts"
+    },
+    "./config": {
+      "import": "./src/config/index.ts",
+      "types": "./src/config/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "zod": "^4.2.1"
+  }
+}

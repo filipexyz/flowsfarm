@@ -1,0 +1,21 @@
+{
+  "name": "@flowsfarm/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "flowsfarm": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun run --watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@flowsfarm/core": "workspace:*",
+    "@flowsfarm/n8n-sync": "workspace:*",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "ora": "^9.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+    "types": ["bun"],
+    "paths": {
+      "@flowsfarm/core": ["./packages/core/src/index.ts"],
+      "@flowsfarm/core/*": ["./packages/core/src/*"],
+      "@flowsfarm/n8n-sync": ["./packages/n8n-sync/src/index.ts"],
+      "@flowsfarm/n8n-sync/*": ["./packages/n8n-sync/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "**/dist", "**/*.test.ts"]
+}
