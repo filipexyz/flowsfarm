@@ -11,6 +11,7 @@ export {
 
 // Storage
 export { getDb, closeDb, runMigrations, schema } from './storage/db';
+export { eq, and, or, like } from 'drizzle-orm';
 export type {
   Connection,
   NewConnection,
@@ -43,3 +44,15 @@ export {
   decrypt,
 } from './utils';
 export type { LogLevel } from './utils';
+
+// Templates
+export {
+  getTemplatesPath,
+  ensureTemplatesDir,
+  listTemplates,
+  loadTemplate,
+  saveTemplate,
+  deleteTemplate,
+  templateExists,
+  type Template,
+} from './templates';

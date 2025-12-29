@@ -44,6 +44,7 @@ export class N8nClient {
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
+        logger.error(`API Error: ${response.status} - ${errorBody}`);
         throw new N8nApiError(
           `API request failed: ${response.status} ${response.statusText}`,
           response.status,
@@ -146,9 +147,14 @@ export class N8nClient {
    * Create a new workflow.
    */
   async createWorkflow(workflow: CreateWorkflowInput): Promise<N8nWorkflow> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { active, ...rest } = workflow;
     const response = await this.request<unknown>('/api/v1/workflows', {
       method: 'POST',
-      body: JSON.stringify(workflow),
+      body: JSON.stringify({
+        ...rest,
+        settings: workflow.settings ?? {},
+      }),
     });
     return N8nWorkflowSchema.parse(response);
   }

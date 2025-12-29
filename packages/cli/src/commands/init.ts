@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { initConfig, isInitialized, runMigrations } from '@flowsfarm/core';
+import { initConfig, isInitialized, runMigrations, ensureTemplatesDir } from '@flowsfarm/core';
 
 export function initCommand(): Command {
   return new Command('init')
@@ -28,11 +28,15 @@ export function initCommand(): Command {
         // Initialize database
         runMigrations();
 
+        // Create templates directory
+        ensureTemplatesDir();
+
         spinner.succeed(chalk.green('FlowsFarm project initialized'));
 
         console.log('\n' + chalk.dim('Created:'));
-        console.log(chalk.dim('  .flowsfarm.json    - Project configuration'));
-        console.log(chalk.dim('  .flowsfarm/        - Data directory'));
+        console.log(chalk.dim('  .flowsfarm.json       - Project configuration'));
+        console.log(chalk.dim('  .flowsfarm/           - Data directory'));
+        console.log(chalk.dim('  .flowsfarm/templates/ - Workflow templates'));
 
         console.log('\n' + chalk.bold('Next steps:'));
         console.log(

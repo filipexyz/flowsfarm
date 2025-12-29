@@ -9,6 +9,26 @@ export function hashContent(content: string): string {
 }
 
 /**
+ * Recursively sort object keys for consistent JSON serialization.
+ */
+function sortObjectKeys(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sortObjectKeys);
+  }
+  if (typeof obj === 'object') {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(obj as Record<string, unknown>).sort()) {
+      sorted[key] = sortObjectKeys((obj as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+  return obj;
+}
+
+/**
  * Hash a workflow object for change detection.
  * Normalizes the object to ensure consistent hashing.
  */
@@ -21,7 +41,9 @@ export function hashWorkflow(workflow: Record<string, unknown>): string {
     id: undefined,
   };
 
-  const json = JSON.stringify(normalized, Object.keys(normalized).sort());
+  // Sort keys recursively for consistent serialization
+  const sorted = sortObjectKeys(normalized);
+  const json = JSON.stringify(sorted);
   return hashContent(json);
 }
 

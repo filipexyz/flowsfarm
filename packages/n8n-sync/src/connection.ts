@@ -8,6 +8,7 @@ import {
   type ConnectionConfig,
 } from '@flowsfarm/core';
 import { N8nClient } from './client';
+import type { CreateWorkflowInput, N8nWorkflow } from './types';
 
 export interface ConnectionInfo {
   id: string;
@@ -237,4 +238,15 @@ export function getClient(idOrName: string): N8nClient {
     baseUrl: connection.baseUrl,
     apiKey: decrypt(connection.apiKeyEncrypted),
   });
+}
+
+/**
+ * Create a new workflow on the remote n8n instance.
+ */
+export async function createWorkflow(
+  connectionId: string,
+  workflow: CreateWorkflowInput
+): Promise<N8nWorkflow> {
+  const client = getClient(connectionId);
+  return client.createWorkflow(workflow);
 }

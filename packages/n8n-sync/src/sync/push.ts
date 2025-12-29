@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   getDb,
   getConfig,
@@ -20,6 +20,29 @@ export interface PushOptions {
   force?: boolean;
 }
 
+/**
+ * Check if a local workflow file has changed compared to stored hash.
+ */
+function hasLocalChanges(
+  workflow: typeof schema.workflows.$inferSelect,
+  workflowsDir: string
+): boolean {
+  const workflowPath = join(workflowsDir, workflow.remoteId, 'workflow.json');
+
+  if (!existsSync(workflowPath)) {
+    return false;
+  }
+
+  try {
+    const content = readFileSync(workflowPath, 'utf-8');
+    const data = JSON.parse(content) as Record<string, unknown>;
+    const currentHash = hashWorkflow(data);
+    return currentHash !== workflow.contentHash;
+  } catch {
+    return false;
+  }
+}
+
 export async function pushWorkflows(
   client: N8nClient,
   options: PushOptions
@@ -36,35 +59,39 @@ export async function pushWorkflows(
   };
 
   try {
-    // Find workflows that need to be pushed
-    let workflowsToSync = db
+    const connectionWorkflowsDir = join(
+      config.workflowsPath,
+      options.connectionId
+    );
+
+    // Get all workflows for this connection
+    let allWorkflows = db
       .select()
       .from(schema.workflows)
-      .where(
-        and(
-          eq(schema.workflows.connectionId, options.connectionId),
-          options.force
-            ? undefined
-            : eq(schema.workflows.syncStatus, 'local_modified')
-        )
-      )
+      .where(eq(schema.workflows.connectionId, options.connectionId))
       .all();
 
     // Filter by specific workflow IDs if provided
     if (options.workflowIds && options.workflowIds.length > 0) {
-      workflowsToSync = workflowsToSync.filter((w) =>
+      allWorkflows = allWorkflows.filter((w) =>
         options.workflowIds!.includes(w.id) ||
         options.workflowIds!.includes(w.remoteId)
       );
     }
 
+    // Find workflows that need to be pushed:
+    // 1. syncStatus is 'local_modified' OR
+    // 2. Local file hash differs from stored hash (detects direct file edits)
+    const workflowsToSync = options.force
+      ? allWorkflows
+      : allWorkflows.filter((w) =>
+          w.syncStatus === 'local_modified' ||
+          w.syncStatus === 'new_local' ||
+          hasLocalChanges(w, connectionWorkflowsDir)
+        );
+
     result.total = workflowsToSync.length;
     logger.info(`Found ${workflowsToSync.length} workflows to push`);
-
-    const connectionWorkflowsDir = join(
-      config.workflowsPath,
-      options.connectionId
-    );
 
     // Process each workflow
     for (const localWorkflow of workflowsToSync) {
@@ -139,15 +166,24 @@ async function processWorkflowPush(
         remoteWorkflow as unknown as Record<string, unknown>
       );
 
-      // If remote has changed since we last synced, we have a conflict
-      if (
-        localWorkflow.remoteUpdatedAt &&
-        new Date(remoteWorkflow.updatedAt) > localWorkflow.remoteUpdatedAt
-      ) {
+      // Read local file hash for comparison
+      const localFileContent = readFileSync(workflowPath, 'utf-8');
+      const localFileData = JSON.parse(localFileContent) as Record<string, unknown>;
+      const localFileHash = hashWorkflow(localFileData);
+
+      // Conflict exists if:
+      // 1. Remote hash differs from what we stored (remote was modified)
+      // 2. AND local file hash differs from stored (local was modified)
+      // If only local changed, no conflict - just push
+      // If only remote changed, would be caught by pull
+      const remoteChanged = remoteHash !== localWorkflow.contentHash;
+      const localChanged = localFileHash !== localWorkflow.contentHash;
+
+      if (remoteChanged && localChanged) {
         const conflict: ConflictInfo = {
           workflowId: localWorkflow.id,
           workflowName: localWorkflow.name,
-          localHash: localWorkflow.contentHash,
+          localHash: localFileHash,
           remoteHash,
           localUpdatedAt: localWorkflow.localUpdatedAt ?? new Date(),
           remoteUpdatedAt: new Date(remoteWorkflow.updatedAt),

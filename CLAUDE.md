@@ -77,4 +77,40 @@ flowsfarm pull                              # Download workflows
 flowsfarm push                              # Upload changes
 flowsfarm status                            # Show sync state
 flowsfarm diff                              # Show differences
+flowsfarm create <name>                     # Create empty workflow
+flowsfarm create <name> -t <template>       # Create workflow from template
+flowsfarm list                              # List all workflows (--json for structured output)
+flowsfarm list --active                     # Filter by active status
+flowsfarm show <name-or-id>                 # Show workflow details (--json, --nodes)
+flowsfarm templates                         # List all templates
+flowsfarm templates show <name>             # Show template details
+flowsfarm templates save <workflow>         # Save workflow as template
+flowsfarm templates delete <name>           # Delete template
 ```
+
+## Agent-First CLI Design
+
+The FlowsFarm CLI must be **agent-friendly**, not just human-friendly. This means:
+
+### Output Requirements
+- Commands should output structured, parseable data (JSON where appropriate)
+- Include IDs and identifiers that agents can use programmatically
+- Provide `--json` flag for machine-readable output
+- Error messages should be clear and actionable
+
+### Discoverability
+- `flowsfarm list` should show all workflows with names, IDs, and status
+- Searching/filtering should be easy (by name, ID, status, connection)
+- Workflow content should be accessible without navigating complex directory structures
+
+### Proactive DX Improvements
+When working on FlowsFarm, **proactively identify and fix bottlenecks**:
+- If a task requires multiple steps that could be one command, add the command
+- If finding information is hard, add a way to query it easily
+- If output is hard to parse, add structured output options
+- If context is missing, add it to the relevant command output
+
+Examples of improvements:
+- Hard to find workflow by name → add `flowsfarm list` with search
+- Can't see workflow content easily → add `flowsfarm show <id-or-name>`
+- Creating workflows is tedious → add templates and `flowsfarm create`

@@ -22,6 +22,7 @@ export {
   removeConnection,
   updateConnection,
   getClient,
+  createWorkflow,
   type ConnectionInfo,
 } from './connection';
 
