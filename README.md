@@ -20,6 +20,17 @@ npm install -g flowsfarm
 bun install -g flowsfarm
 ```
 
+### Claude Code Plugin
+
+Install the FlowsFarm skill for Claude Code:
+
+```
+/plugin marketplace add filipexyz/plugins
+/plugin install flowsfarm@filipelabs
+```
+
+This teaches Claude how to use FlowsFarm to manage your n8n workflows.
+
 ### Development Setup
 
 ```bash
