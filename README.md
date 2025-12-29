@@ -13,12 +13,19 @@ Local-first workflow synchronization for n8n. Download, edit, and sync workflows
 ## Installation
 
 ```bash
-# Clone and install
-git clone https://github.com/filipelabs/flowsfarm.git
+# Install globally
+npm install -g flowsfarm
+
+# Or with bun
+bun install -g flowsfarm
+```
+
+### Development Setup
+
+```bash
+git clone https://github.com/filipexyz/flowsfarm.git
 cd flowsfarm
 bun install
-
-# Run CLI
 bun run cli --help
 ```
 
@@ -26,24 +33,24 @@ bun run cli --help
 
 ```bash
 # Initialize project
-bun run cli init
+flowsfarm init
 
 # Connect to n8n instance
-bun run cli connect add -n prod -u https://n8n.example.com -k YOUR_API_KEY
+flowsfarm connect add -n prod -u https://n8n.example.com -k YOUR_API_KEY
 
 # Pull all workflows
-bun run cli pull
+flowsfarm pull
 
 # List workflows
-bun run cli list
+flowsfarm list
 
 # View a workflow
-bun run cli show "My Workflow"
+flowsfarm show "My Workflow"
 
 # Edit workflows in .flowsfarm/workflows/...
 
 # Push changes back
-bun run cli push
+flowsfarm push
 ```
 
 ## CLI Commands
@@ -52,36 +59,36 @@ bun run cli push
 
 | Command | Description |
 |---------|-------------|
-| `init` | Initialize FlowsFarm in current directory |
-| `connect add -n <name> -u <url> -k <key>` | Add n8n connection |
-| `connect list` | List connections |
-| `pull` | Download workflows from n8n |
-| `push` | Upload local changes to n8n |
-| `status` | Show sync status |
-| `diff` | Show differences between local and remote |
+| `flowsfarm init` | Initialize FlowsFarm in current directory |
+| `flowsfarm connect add -n <name> -u <url> -k <key>` | Add n8n connection |
+| `flowsfarm connect list` | List connections |
+| `flowsfarm pull` | Download workflows from n8n |
+| `flowsfarm push` | Upload local changes to n8n |
+| `flowsfarm status` | Show sync status |
+| `flowsfarm diff` | Show differences between local and remote |
 
 ### Workflow Commands
 
 | Command | Description |
 |---------|-------------|
-| `list` | List all synced workflows |
-| `list --json` | Output as JSON |
-| `list --active` | Show only active workflows |
-| `show <name-or-id>` | Show workflow details |
-| `show <name> --json` | Output full workflow as JSON |
-| `show <name> --nodes` | Show node parameters |
-| `create <name>` | Create empty workflow |
-| `create <name> -t <template>` | Create from template |
+| `flowsfarm list` | List all synced workflows |
+| `flowsfarm list --json` | Output as JSON |
+| `flowsfarm list --active` | Show only active workflows |
+| `flowsfarm show <name-or-id>` | Show workflow details |
+| `flowsfarm show <name> --json` | Output full workflow as JSON |
+| `flowsfarm show <name> --nodes` | Show node parameters |
+| `flowsfarm create <name>` | Create empty workflow |
+| `flowsfarm create <name> -t <template>` | Create from template |
 
 ### Template Commands
 
 | Command | Description |
 |---------|-------------|
-| `templates` | List all templates |
-| `templates show <name>` | Show template details |
-| `templates save <workflow>` | Save workflow as template |
-| `templates save <workflow> -n <name>` | Save with custom name |
-| `templates delete <name>` | Delete template |
+| `flowsfarm templates` | List all templates |
+| `flowsfarm templates show <name>` | Show template details |
+| `flowsfarm templates save <workflow>` | Save workflow as template |
+| `flowsfarm templates save <workflow> -n <name>` | Save with custom name |
+| `flowsfarm templates delete <name>` | Delete template |
 
 ## Project Structure
 
@@ -104,10 +111,10 @@ Templates are JSON files in `.flowsfarm/templates/`. Save any synced workflow as
 
 ```bash
 # Save a workflow as template
-bun run cli templates save "My Workflow" -n my-template
+flowsfarm templates save "My Workflow" -n my-template
 
 # Create new workflow from template
-bun run cli create "New Workflow" -t my-template
+flowsfarm create "New Workflow" -t my-template
 ```
 
 Template format:
