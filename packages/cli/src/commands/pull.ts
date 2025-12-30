@@ -2,7 +2,13 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { runMigrations } from '@flowsfarm/core';
-import { SyncEngine, listConnections, getConnection } from '@flowsfarm/n8n-sync';
+import {
+  SyncEngine,
+  listConnections,
+  getConnection,
+  diffAllWorkflows,
+} from '@flowsfarm/n8n-sync';
+import { showDiff } from '../utils/diff-display';
 
 export function pullCommand(): Command {
   return new Command('pull')
@@ -28,24 +34,40 @@ export function pullCommand(): Command {
         for (const connection of connections) {
           if (!connection) continue;
 
-          console.log(chalk.bold(`\nPulling from ${connection.name}...`));
+          console.log(chalk.bold(`\n${connection.name}`));
 
-          const spinner = ora('Fetching workflows...').start();
+          const spinner = ora('Fetching remote workflows...').start();
 
           try {
+            // First show diff of what will change
+            const diffs = await diffAllWorkflows(connection.id);
+            const changed = diffs.filter((d) => d.hasChanges);
+
+            spinner.stop();
+
+            // Show incoming changes
+            if (changed.length > 0) {
+              console.log(chalk.cyan(`\nIncoming changes:`));
+              for (const diff of changed) {
+                showDiff(diff);
+              }
+              console.log();
+            }
+
+            // Now pull
+            const pullSpinner = ora('Pulling changes...').start();
             const engine = new SyncEngine(connection.id);
             const result = await engine.pull({
               workflowIds: options.workflow ? [options.workflow] : undefined,
               force: options.force,
             });
 
-            spinner.succeed(chalk.green('Pull complete'));
+            pullSpinner.succeed(chalk.green('Pull complete'));
 
             // Show results
-            console.log(chalk.dim(`  Total:     ${result.total}`));
-            console.log(chalk.green(`  Created:   ${result.created}`));
-            console.log(chalk.blue(`  Updated:   ${result.updated}`));
-            console.log(chalk.dim(`  Unchanged: ${result.unchanged}`));
+            if (result.created > 0) console.log(chalk.green(`  Created:   ${result.created}`));
+            if (result.updated > 0) console.log(chalk.blue(`  Updated:   ${result.updated}`));
+            if (result.unchanged > 0) console.log(chalk.dim(`  Unchanged: ${result.unchanged}`));
 
             if (result.errors.length > 0) {
               console.log(chalk.red(`  Errors:    ${result.errors.length}`));

@@ -9,6 +9,7 @@ import {
   getConnection,
   type WorkflowDiff,
 } from '@flowsfarm/n8n-sync';
+import { showDiff } from '../utils/diff-display';
 
 export function diffCommand(): Command {
   return new Command('diff')
@@ -64,37 +65,9 @@ export function diffCommand(): Command {
               continue;
             }
 
-            // Show diffs like git
+            // Show diffs
             for (const diff of changed) {
-              console.log(chalk.bold(`\ndiff ${diff.filePath}`));
-
-              if (diff.changes.length > 0) {
-                for (const change of diff.changes) {
-                  console.log(chalk.cyan(`@@ ${change.path} @@`));
-                  if (change.type === 'modified') {
-                    const localLines = formatJson(change.localValue).split('\n');
-                    const remoteLines = formatJson(change.remoteValue).split('\n');
-                    for (const line of localLines) {
-                      console.log(chalk.red(`-${line}`));
-                    }
-                    for (const line of remoteLines) {
-                      console.log(chalk.green(`+${line}`));
-                    }
-                  } else if (change.type === 'added') {
-                    const lines = formatJson(change.localValue).split('\n');
-                    for (const line of lines) {
-                      console.log(chalk.green(`+${line}`));
-                    }
-                  } else if (change.type === 'removed') {
-                    const lines = formatJson(change.remoteValue).split('\n');
-                    for (const line of lines) {
-                      console.log(chalk.red(`-${line}`));
-                    }
-                  }
-                }
-              } else {
-                console.log(chalk.dim('  (binary or content differs)'));
-              }
+              showDiff(diff);
             }
 
             // Summary
@@ -122,14 +95,4 @@ export function diffCommand(): Command {
         process.exit(1);
       }
     });
-}
-
-function formatJson(value: unknown): string {
-  if (value === undefined) return 'undefined';
-  if (value === null) return 'null';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    return JSON.stringify(value, null, 2);
-  }
-  return String(value);
 }
